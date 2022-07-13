@@ -17,6 +17,12 @@ def phi_square(_x):
     x[x>20] = 20
     return x[0]
 
+def gamma_phi_square(_x,gamma=5.0):
+    x = np.array([_x])
+    x[x<=0] = 0
+    x[x>0] = gamma * (x[x>0]**2) 
+    x[x>100] = 100
+    return x[0]
 
 def plot_PVratesandweights(results1,results2,sigma1,sigma2,name):
     plt.figure(figsize=(7,4))
@@ -24,7 +30,7 @@ def plot_PVratesandweights(results1,results2,sigma1,sigma2,name):
     plt.plot(results1['wPX1'], label='high', color =cm.viridis(.1),linewidth=2)
     plt.plot(results2['wPX1'], label='low',color =cm.viridis(.5),linewidth=2)
     plt.plot(np.arange(len(results1['wPX1'])),np.ones(len(results1['wPX1']))*sigma1,'--',color =cm.viridis(.1),label=r'$\sigma$ high')
-    plt.plot(np.arange(len(results1['wPX1']r)),np.ones(len(results1['wPX1']))*sigma2,'--',color =cm.viridis(.5),label=r'$\sigma$ low')
+    plt.plot(np.arange(len(results1['wPX1'])),np.ones(len(results1['wPX1']))*sigma2,'--',color =cm.viridis(.5),label=r'$\sigma$ low')
 
     plt.ylabel('PV weights',fontsize=16)
     plt.xlabel('time',fontsize=16)
