@@ -6,6 +6,7 @@ import scipy.stats as stats
 from sklearn.utils import shuffle
 from activation_functions import * 
 from plotting_functions import * 
+from functions import *
 
 
 class Circuit:
@@ -31,7 +32,7 @@ class Circuit:
 		self.weighting = 1.0
 		self.error_weighting = 0.1 
 		self.PV_weighting = 1.0 
-		self.wP = np.sqrt((1.95/0.1))#np.sqrt((1.95/0.1)*(1/2)) for single PV
+		self.wP = np.sqrt((2-0.1)/0.1)#np.sqrt((1.95/0.1)*(1/2)) for single PV
 		self.wE = 1.0
 		self.w_init_PVX = 0.01 
 		self.w_init_PVS = 0.01
@@ -48,6 +49,8 @@ class Circuit:
 		self.R_neuron = False
 		self.single_PV = True
 		self.PV_mu = True
+		self.NMDA = False
+		self.exponent = 2
 		self.rectified = 1
 		self.Rrate = None
 		self.SSTrate = None
@@ -114,10 +117,15 @@ class Circuit:
 
 
 class Sim:
-	def __init__(self, stimulus_duration = 1, number_of_samples=400000):
+	def __init__(self, stimulus_duration = 1, number_of_samples=400000, stimulus_gap=False):
 		self.stimulus_duration = stimulus_duration
 		self.number_of_samples = number_of_samples
-		self.T = self.stimulus_duration * self.number_of_samples
+		if stimulus_gap:
+			self.T = self.number_of_samples * (self.stimulus_duration +3)
+		else:
+			self.T = self.number_of_samples * self.stimulus_duration
+		print(self.T)
+		print('sim_init')
 		self.sigma = 0.5
 		self.mean= 5.0
 		#learning rate
@@ -126,6 +134,7 @@ class Sim:
 		self.eta_S = 0.1
 		self.eta_ES = 0.01
 		self.eta_PS = 0.0001
+
 		# monitors
 		T = self.T
 		self.rP_monitor = np.empty((T))
@@ -137,6 +146,7 @@ class Sim:
 		self.rE_N_monitor = np.empty((T))
 		self.rS_N_monitor = np.empty((T))
 		self.rR_monitor = np.empty((T))
+		self.rRa_monitor = np.empty((T))
 
 		self.wPX1_monitor = np.empty((T))
 		self.wSX_monitor = np.empty((T))
@@ -157,14 +167,21 @@ class Sim:
 
 
 
-	def get_stimuli(self,mean,sigma):
+	def get_stimuli(self,mean,sigma, stimulus_gap=False):
 		# whisker
+		if stimulus_gap:
+			self.T = self.number_of_samples * (self.stimulus_duration + 3)
 		print(self.T)
 		rY1 = np.zeros(self.T)
 		Y1 = sigma*np.random.randn(self.number_of_samples)+mean
 		for i in range(self.stimulus_duration):
-			rY1[i::self.stimulus_duration] = Y1
+			rY1[i::self.stimulus_duration+stimulus_gap*3] = Y1
+		if stimulus_gap: 
+			rY1[:-3] = rY1[3:]
+			rY1[-3:] = np.zeros((3))
+		print(rY1)
 		return rY1
+
 
 	def monitor_weights(self,circuit,t):
 		self.wPX1_monitor[t] = circuit.wPX1
@@ -194,6 +211,7 @@ class Sim:
 
 		self.T = self.number_of_samples * self.stimulus_duration 
 		T = self.T
+
 		#self.T = self.number_of_samples * self.stimulus_duration # number of time steps
 		# inputs
 		# sound
@@ -222,12 +240,33 @@ class Sim:
 
 		for t in range(T):
 
+
+			# store monitors
+			self.rP_monitor[t] = rP
+			if not circuit.single_PV:
+				self.rP_P_monitor[t] = rP_P
+				self.rP_N_monitor[t] = rP_N
+
+			self.sigma_mon[t] = self.sigma
+
+			self.rS_P_monitor[t] = rS_P
+			self.rS_N_monitor[t] = rS_N
+			self.rE_P_monitor[t] = rE_P
+			self.rE_N_monitor[t] = rE_N
+			self.rR_monitor[t] = R
+			self.rRa_monitor[t] = phi(circuit.wRX1 * rX1[t])
+
+
+
+			self.monitor_weights(circuit,t)
+
+
 			if circuit.R_neuron:
 				rR = R
 			else:
 				rR=rRrate[t]
 
-			drS_P = (-rS_P + phi(circuit.wSR_P * R,case=circuit.rectified))/circuit.tau_S
+			drS_P = (-rS_P + phi(circuit.wSR_P * rR,case=circuit.rectified))/circuit.tau_S
 			drS_N = (-rS_N + phi(circuit.wSY1_N * rY1[t],case=circuit.rectified))/circuit.tau_S
 
 			if circuit.single_PV:
@@ -242,10 +281,14 @@ class Sim:
 			self.PV_in[t] = (circuit.wPY1 * rY1[t] - circuit.PV_mu*(circuit.wPS_P * rS_P) + circuit.PV_mu*(circuit.wPR * rR) - circuit.wPS_N * rS_N)
 			if circuit.single_PV:
 				drE_P = (-rE_P + phi((circuit.uncertainty_weighted*(1.0/(circuit.PV_weighting + (circuit.wEP_P * rP))) + ((1-circuit.uncertainty_weighted)*circuit.weighting)) * (circuit.wEY1_P * rY1[t] - circuit.wES_P * rS_P),case=circuit.rectified))/circuit.tau_E                    
-				drE_N = (-rE_N + phi((circuit.uncertainty_weighted*(1.0/(circuit.PV_weighting + (circuit.wEP_N * rP))) + ((1-circuit.uncertainty_weighted)*circuit.weighting)) * (circuit.wER_N * R - circuit.wES_N * rS_N),case=circuit.rectified))/circuit.tau_E
+				drE_N = (-rE_N + phi((circuit.uncertainty_weighted*(1.0/(circuit.PV_weighting + (circuit.wEP_N * rP))) + ((1-circuit.uncertainty_weighted)*circuit.weighting)) * (circuit.wER_N * rR - circuit.wES_N * rS_N),case=circuit.rectified))/circuit.tau_E
 			else:
-				drE_P = (-rE_P + phi((circuit.uncertainty_weighted*(1.0/(circuit.PV_weighting + (circuit.wEP_P * rP_P))) + ((1-circuit.uncertainty_weighted)*circuit.weighting)) * (circuit.wEY1_P * rY1[t] - circuit.wES_P * rS_P),case=circuit.rectified))/circuit.tau_E                    
-				drE_N = (-rE_N + phi((circuit.uncertainty_weighted*(1.0/(circuit.PV_weighting + (circuit.wEP_N * rP_N))) + ((1-circuit.uncertainty_weighted)*circuit.weighting)) * (circuit.wER_N * R - circuit.wES_N * rS_N),case=circuit.rectified))/circuit.tau_E
+				if circuit.NMDA:
+					drE_P = (-rE_P + phi((circuit.uncertainty_weighted*(1.0/(circuit.PV_weighting + (circuit.wEP_P * rP_P))) + ((1-circuit.uncertainty_weighted)*circuit.weighting)) * rectify(circuit.wEY1_P * rY1[t] - circuit.wES_P * rS_P)**circuit.exponent,case=circuit.rectified))/circuit.tau_E                    
+					drE_N = (-rE_N + phi((circuit.uncertainty_weighted*(1.0/(circuit.PV_weighting + (circuit.wEP_N * rP_N))) + ((1-circuit.uncertainty_weighted)*circuit.weighting)) * rectify(circuit.wER_N * rR - circuit.wES_N * rS_N)**circuit.exponent,case=circuit.rectified))/circuit.tau_E
+				else:
+					drE_P = (-rE_P + phi((circuit.uncertainty_weighted*(1.0/(circuit.PV_weighting + (circuit.wEP_P * rP_P))) + ((1-circuit.uncertainty_weighted)*circuit.weighting)) * (circuit.wEY1_P * rY1[t] - circuit.wES_P * rS_P),case=circuit.rectified))/circuit.tau_E                    
+					drE_N = (-rE_N + phi((circuit.uncertainty_weighted*(1.0/(circuit.PV_weighting + (circuit.wEP_N * rP_N))) + ((1-circuit.uncertainty_weighted)*circuit.weighting)) * (circuit.wER_N * rR - circuit.wES_N * rS_N),case=circuit.rectified))/circuit.tau_E
 			if circuit.VIP:
 				K = (1.0/(1.0+rP_P))
 				drV = (-K*rV + phi(I,case=circuit.rectified))/circuit.tau_V 
@@ -259,20 +302,6 @@ class Sim:
 				
 				
 				
-			# store monitors
-			self.rP_monitor[t] = rP
-			if not circuit.single_PV:
-				self.rP_P_monitor[t] = rP_P
-				self.rP_N_monitor[t] = rP_N
-
-			self.sigma_mon[t] = self.sigma
-
-			self.rS_P_monitor[t] = rS_P
-			self.rS_N_monitor[t] = rS_N
-			self.rE_P_monitor[t] = rE_P
-			self.rE_N_monitor[t] = rE_N
-			self.rR_monitor[t] = R
-			self.monitor_weights(circuit,t)
 
 
 
@@ -309,6 +338,7 @@ class Sim:
 			#wRE_P += plastic * eta_RE * (wRE_P*rE_P - wRE_N*rE_N) * rE_P
 			#wRE_N += plastic * eta_RE * (wRE_P*rE_P - wRE_N*rE_N) * rE_N
 
+
 			circuit.wPX1 += circuit.dt*dwPX1
 			if not circuit.single_PV:
 				circuit.wPX1_P += circuit.dt*dwPX1_P
@@ -323,7 +353,6 @@ class Sim:
 				circuit.wES_N += circuit.dt*dwES_N
 
 
-
 		results = {
 		'PV_avg' : np.mean(self.rP_monitor[100:]),
 		'PV_P_avg' : np.mean(self.rP_P_monitor[100000:]),
@@ -332,7 +361,7 @@ class Sim:
 		'E_P_avg' : np.mean(self.rE_P_monitor[100:]),
 		'SST_N_avg': np.mean(self.rS_N_monitor[100:]),
 		'E_N_avg' : np.mean(self.rE_N_monitor[100:]),
-		'R_avg' : np.mean(self.rR_monitor[100:]),
+		'R_avg' : np.mean(self.rR_monitor[100000:]),
 		'PV_std' : np.std(self.rP_monitor[100:]),
 		'PV_P_std' : np.std(self.rP_P_monitor[100000:]),	
 		'PV_N_std' : np.std(self.rP_N_monitor[100000:]),	
@@ -340,7 +369,7 @@ class Sim:
 		'E_P_std' : np.std(self.rE_P_monitor[100:]),
 		'SST_N_std': np.std(self.rS_N_monitor[100:]),
 		'E_N_std' : np.std(self.rE_N_monitor[100:]),
-		'R_std' : np.std(self.rR_monitor[100:]),
+		'R_std' : np.std(self.rR_monitor[100000:]),
 		'wPX1' : self.wPX1_monitor,
 		'wPX1_P' : self.wPX1_P_monitor,
 		'wPX1_N' : self.wPX1_N_monitor,
@@ -356,10 +385,13 @@ class Sim:
 		'rE_N' : self.rE_N_monitor, 
 		'rS_N' : self.rS_N_monitor, 
 		'rP' : self.rP_monitor, 
-		'rP_P' : self.rP_N_monitor, 
+		'rP_P' : self.rP_P_monitor, 
 		'rP_N' : self.rP_N_monitor, 
+		'rX' : rX1,
+		'rY' : rY1,
 
 		'rR' : self.rR_monitor, 
+		'rRa' : self.rRa_monitor, 
 		'rY1' : rY1,
 		'PV_in':self.PV_in,
 		'PV_in_a':self.PV_in_a,
@@ -401,6 +433,22 @@ class Sim:
 		rE_P = 0.0
 
 
+		wa_mu_mon = np.empty((T))
+		wa_sigma_mon = np.empty((T))
+		ws_sigma_mon = np.empty((T))
+		diff_mon = np.empty((T))
+		beta_dyn_mon = np.empty((T))
+		sigma_e_mon = np.empty((T))
+
+		ratio = np.empty((T))
+		phase1 = np.empty((T))
+		n = 1
+		wa_mu = 0.001
+		wa_sigma = 0.05
+		ws_sigma = 0.001
+		sigma_e = .1
+		beta_dyn = 0.1
+
 		for t in range(T):
 			if circuit.plastic_SX:
 				drS_P = (-rS_P + phi((1-circuit.beta_S)*(circuit.wSX * rX1[t]) + circuit.beta_S*(circuit.wSY1 * rY1[t]),case=circuit.rectified))/circuit.tau_S
@@ -417,6 +465,10 @@ class Sim:
 
 			self.rS_P_monitor[t] = rS_P
 			self.rE_P_monitor[t] = rE_P
+
+			wa_mu_mon[t] = wa_mu
+			wa_sigma_mon[t] = wa_sigma
+			ws_sigma_mon[t] = ws_sigma
 			self.monitor_weights(circuit,t)
 
 
@@ -426,7 +478,35 @@ class Sim:
 			dwES_P = circuit.plastic_ES * self.eta_ES * ((circuit.wEY1_P * rY1[t] - circuit.wES_P * rS_P))*rS_P
 			dwSX = circuit.plastic_SX * self.eta_S * ((rS_P - (circuit.wSX*rX1[t])) * rX1[t])
 
-			
+			# estimate variability of w_a a
+			wa_mu += (1/n) * (circuit.wPX1 - wa_mu)
+			wa_sigma += (1/n) * ((circuit.wPX1 - wa_mu)**2 - wa_sigma)
+
+			ws_sigma += (1/n) * ((rY1[t] - rS_P)**2 - ws_sigma)
+			sigma_e_mon[t] = sigma_e
+
+			if ((1/n) * (circuit.wPX1 - wa_mu)) > 1e-6:
+				beta_dyn = (.1/(.1+wa_mu))
+				phase1[t]=1 
+			else:
+				phase1[t]=0
+				#print(((1/n) * (circuit.wPX1 - wa_mu)))
+				beta_dyn = (sigma_e/(sigma_e+wa_mu))
+				if t>10:
+					sigma_e = (1-beta_dyn)*sigma_e  
+
+			ratio[t] = (1/wa_mu) 
+			#beta_dyn= (1/wa_mu**2)/((1/wa_mu**2) + (1/wa_sigma**2))
+			#ratio[t] = (1/wa_mu**2)/((1/wa_mu**2) + (1/(wa_sigma**2+1e-10)))
+			#beta_dyn+= (-beta_dyn + ((1/wa_mu**2)/((1/wa_mu**2) + (1/(wa_sigma**2+1e-3)))))/10.0
+
+			beta_dyn_mon[t] = beta_dyn
+			diff_mon[t] = (rY1[t] - rS_P)
+			n += 1
+
+
+
+
 			# rate changes
 			rS_P += circuit.dt*drS_P
 			rP += circuit.dt*drP
@@ -461,6 +541,276 @@ class Sim:
 		'rP' : self.rP_monitor, 
 		'rPa' : self.rPa_monitor, 
 		'rY1' : rY1,
+		'sigma':self.sigma_mon,
+		'wa_mu':wa_mu_mon,
+		'wa_sigma':wa_sigma_mon,
+		'ws_sigma':ws_sigma_mon,
+		'beta_dyn':beta_dyn_mon,
+		'ratio' : ratio,
+		'phase1' : phase1,
+		'sigma_e': sigma_e_mon
+		}
+
+		return results
+
+
+	def run_nPE(self, circuit, mean=5.0, sigma=0.5, start=100000,seed=None):
+		print('mean'+str(mean))
+		print('sigma'+str(sigma))
+		print('seed'+str(seed))
+		
+		if seed is not None:
+			np.random.seed(seed)
+
+		#sim parameters
+		self.sigma = sigma
+		self.mean = mean
+
+		self.T = self.number_of_samples * self.stimulus_duration 
+		T = self.T
+		#self.T = self.number_of_samples * self.stimulus_duration # number of time steps
+		# inputs
+		# sound
+		rX1 = np.ones((T))
+		
+		# get whisker stimuli
+		rY1 = self.get_stimuli(mean,sigma)
+
+		#initial rates
+		rP = 0.0
+		rS_N = 0.0
+		rE_N = 0.0
+
+		if circuit.Rrate is None:
+			rR = np.ones(T)*mean
+		else:
+			rR = np.ones(T)*circuit.Rrate
+
+
+		for t in range(T):
+
+			drS_N = (-rS_N + phi(circuit.wSY1 * rY1[t],case=circuit.rectified))/circuit.tau_S
+			drP = (-rP + phi_square(((1-circuit.beta_P)*(circuit.wPX1 * rX1[t]) + circuit.beta_P*(circuit.wPR * rR[t] - circuit.wPS_P * rS_N))))/circuit.tau_P
+			drE_N = (-rE_N + phi((circuit.uncertainty_weighted*(1.0/(circuit.PV_weighting + (circuit.wEP_N * rP))) + ((1-circuit.uncertainty_weighted)*circuit.weighting)) * (circuit.wER_N * rR[t] - circuit.wES_N * rS_N),case=circuit.rectified))/circuit.tau_E                    
+
+				
+			# store monitors
+			self.rP_monitor[t] = rP
+			self.rPa_monitor[t] = phi_square(circuit.wPX1 * rX1[t])
+			self.sigma_mon[t] = self.sigma
+
+			self.rS_N_monitor[t] = rS_N
+			self.rE_N_monitor[t] = rE_N
+			self.monitor_weights(circuit,t)
+
+
+			# weight changes
+			dwPX1 = circuit.plastic_PX * self.eta_P * ((rP - phi_square(circuit.wPX1*rX1[t])) * rX1[t])
+			dwPS_N = circuit.plastic_PS * self.eta_PS * (circuit.wPR * rR[t] - circuit.wPS_N * rS_N)*rS_N
+			#dwRX1 = circuit.plastic_RX * self.eta_R * ((rR[t] - (circuit.wRX1*rX1[t])) * rX1[t])
+
+			
+			# rate changes
+			rS_N += circuit.dt*drS_N
+			rP += circuit.dt*drP
+			rE_N += circuit.dt*drE_N
+
+			circuit.wPX1 += circuit.dt*dwPX1
+			#if circuit.plastic_RX:
+			#	circuit.wRX1 += circuit.dt*dwRX1
+			if circuit.plastic_PS:
+				circuit.wPS_N += circuit.dt*dwPS_N
+			if circuit.plastic_ES:
+				circuit.wES_N += circuit.dt*dwES_N
+
+
+
+		results = {
+
+		'PV_avg' : np.mean(self.rP_monitor[start:]),
+		'SST_N_avg': np.mean(self.rS_N_monitor[start:]),
+		'E_N_avg' : np.mean(self.rE_N_monitor[start:]),
+		'PV_std' : np.std(self.rP_monitor[start:]),
+		'PV_N_std' : np.std(self.rP_N_monitor[start:]),	
+		'SST_N_std': np.std(self.rS_N_monitor[start:]),
+		'E_N_std' : np.std(self.rE_N_monitor[start:]),
+		'wPX1' : self.wPX1_monitor,
+		'wPX1_N' : self.wPX1_N_monitor,
+		'wSX' : self.wSX_monitor,
+		'wPS_N' : self.wPS_N_monitor, 
+		'wES_N' : self.wES_N_monitor, 
+		'rE_N' : self.rE_N_monitor, 
+		'rS_N' : self.rS_N_monitor, 
+		'rP' : self.rP_monitor, 
+		'rPa' : self.rPa_monitor, 
+		'rY1' : rY1,
+		'sigma':self.sigma_mon
+
+		}
+
+		return results
+
+	
+
+	def run_fakePV(self, circuit, mean=5.0, sigma=0.5, stimulus_gap = False, seed=None):
+		print('mean'+str(mean))
+		print('sigma'+str(sigma))
+		print('seed'+str(seed))
+		
+		if seed is not None:
+			np.random.seed(seed)
+
+		#sim parameters
+		self.sigma = sigma
+		self.mean = mean
+
+		if stimulus_gap:
+			self.T = self.number_of_samples * (self.stimulus_duration +3)
+		else:
+			self.T = self.number_of_samples * self.stimulus_duration
+
+		print('T')
+		print(self.T)
+
+		T = self.T
+		#self.T = self.number_of_samples * self.stimulus_duration # number of time steps
+		# inputs
+		# sound
+		rX1 = np.ones((T))
+		
+		# get whisker stimuli
+		rY1 = self.get_stimuli(mean,sigma, stimulus_gap)
+
+		if circuit.Rrate is None:
+			rRrate = np.ones(T)*self.mean
+		else:
+			rRrate = np.ones(T)*circuit.Rrate
+
+
+		#initial rates
+		R = 0.0
+		rR=0.0
+		rP = self.sigma**2
+		rP_P = 0.0
+		rP_N = 0.0
+		rS_P = 0.0
+		rS_N = 0.0
+		rE_P = 0.0
+		rE_N = 0.0
+
+
+		for t in range(T):
+
+			if circuit.R_neuron:
+				rR = R
+			else:
+				rR=rRrate[t]
+
+			drS_P = (-rS_P + phi(circuit.wSR_P * rR,case=circuit.rectified))/circuit.tau_S
+			drS_N = (-rS_N + phi(circuit.wSY1_N * rY1[t],case=circuit.rectified))/circuit.tau_S
+
+			drE_P = (-rE_P + phi((circuit.uncertainty_weighted*(1.0/(circuit.PV_weighting + (circuit.wEP_P * rP))) + ((1-circuit.uncertainty_weighted)*circuit.weighting)) * (circuit.wEY1_P * rY1[t] - circuit.wES_P * rS_P),case=circuit.rectified))/circuit.tau_E                    
+			drE_N = (-rE_N + phi((circuit.uncertainty_weighted*(1.0/(circuit.PV_weighting + (circuit.wEP_N * rP))) + ((1-circuit.uncertainty_weighted)*circuit.weighting)) * (circuit.wER_N * rR - circuit.wES_N * rS_N),case=circuit.rectified))/circuit.tau_E
+
+
+			self.EN_in[t] = circuit.wER_N * rR - circuit.wES_N * rS_N
+			self.EP_in[t] = circuit.wEY1_P * rY1[t] - circuit.wES_P * rS_P
+
+			drR = (-R + phi((circuit.wRX1 * rX1[t]) + circuit.error_weighting*(circuit.wRE_P * rE_P) - circuit.error_weighting*(circuit.wRE_N * rE_N),case=circuit.rectified))/circuit.tau_R # no convex combination, input from error neuron
+
+
+				
+				
+				
+			# store monitors
+			self.rP_monitor[t] = rP
+
+			self.sigma_mon[t] = self.sigma
+
+			self.rS_P_monitor[t] = rS_P
+			self.rS_N_monitor[t] = rS_N
+			self.rE_P_monitor[t] = rE_P
+			self.rE_N_monitor[t] = rE_N
+			self.rR_monitor[t] = R
+			self.rRa_monitor[t] = phi(circuit.wRX1 * rX1[t])
+
+
+			self.monitor_weights(circuit,t)
+
+
+
+			# weight changes
+
+			dwRX1 = circuit.plastic * self.eta_R * ((R - (circuit.wRX1*rX1[t])) * rX1[t])
+			dwPS_P = circuit.plastic_PS * self.eta_PS * (circuit.wPY1 * rY1[t] - circuit.wPS_P * rS_P)*rS_P
+			dwPS_N = circuit.plastic_PS * self.eta_PS * (circuit.wPR * rR - circuit.wPS_N * rS_N)*rS_N
+
+			dwES_P = circuit.plastic_ES * self.eta_ES * ((circuit.wEY1_P * rY1[t] - circuit.wES_P * rS_P))*rS_P
+			dwES_N = circuit.plastic_ES * self.eta_ES * ((circuit.wER_N * rR - circuit.wES_N * rS_N))*rS_N
+			
+			
+			# rate changes
+			R += circuit.dt*drR
+			rS_P += circuit.dt*drS_P
+			rS_N += circuit.dt*drS_N
+			rE_P += circuit.dt*drE_P
+			rE_N += circuit.dt*drE_N
+			
+			
+
+			circuit.wRX1 += circuit.dt*dwRX1
+			if circuit.plastic_PS:
+				circuit.wPS_P += circuit.dt*dwPS_P
+				circuit.wPS_N += circuit.dt*dwPS_N
+			if circuit.plastic_ES:
+				circuit.wES_P += circuit.dt*dwES_P
+				circuit.wES_N += circuit.dt*dwES_N
+
+
+
+		results = {
+		'PV_avg' : np.mean(self.rP_monitor[100:]),
+		'PV_P_avg' : np.mean(self.rP_P_monitor[100000:]),
+		'PV_N_avg' : np.mean(self.rP_N_monitor[100000:]),
+		'SST_P_avg': np.mean(self.rS_P_monitor[100:]),
+		'E_P_avg' : np.mean(self.rE_P_monitor[100:]),
+		'SST_N_avg': np.mean(self.rS_N_monitor[100:]),
+		'E_N_avg' : np.mean(self.rE_N_monitor[100:]),
+		'R_avg' : np.mean(self.rR_monitor[100000:]),
+		'PV_std' : np.std(self.rP_monitor[100:]),
+		'PV_P_std' : np.std(self.rP_P_monitor[100000:]),	
+		'PV_N_std' : np.std(self.rP_N_monitor[100000:]),	
+		'SST_P_std': np.std(self.rS_P_monitor[100:]),
+		'E_P_std' : np.std(self.rE_P_monitor[100:]),
+		'SST_N_std': np.std(self.rS_N_monitor[100:]),
+		'E_N_std' : np.std(self.rE_N_monitor[100:]),
+		'R_std' : np.std(self.rR_monitor[100000:]),
+		'wPX1' : self.wPX1_monitor,
+		'wPX1_P' : self.wPX1_P_monitor,
+		'wPX1_N' : self.wPX1_N_monitor,
+
+		'wRX1' : self.wRX1_monitor, 
+		'wPS_P' : self.wPS_P_monitor, 
+		'wPS_N' : self.wPS_N_monitor, 
+		'wES_P' : self.wES_P_monitor, 
+		'wES_N' : self.wES_N_monitor, 
+		#'wRE' : wRE_monitor, 
+		'rE_P' : self.rE_P_monitor, 
+		'rS_P' : self.rS_P_monitor, 
+		'rE_N' : self.rE_N_monitor, 
+		'rS_N' : self.rS_N_monitor, 
+		'rP' : self.rP_monitor, 
+		'rP_P' : self.rP_N_monitor, 
+		'rP_N' : self.rP_N_monitor, 
+
+		'rR' : self.rR_monitor, 
+		'rRa' : self.rRa_monitor, 
+		'rY1' : rY1,
+		'PV_in':self.PV_in,
+		'PV_in_a':self.PV_in_a,
+
+		'EP_in':self.EP_in,
+		'EN_in':self.EN_in,
 		'sigma':self.sigma_mon
 
 		}
@@ -470,10 +820,8 @@ class Sim:
 
 	
 
-	
 
-
-	def run_fakePV(self, mean=5.0, sigma=0.5, stimulus_duration=1, seed=None):
+	def run_oldfakePV(self, mean=5.0, sigma=0.5, stimulus_duration=1, seed=None):
 		print('mean'+str(mean))
 		print('sigma'+str(sigma))
 		print('seed'+str(seed))

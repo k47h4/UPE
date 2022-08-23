@@ -17,6 +17,9 @@ def phi_square(_x):
     x[x>20] = 20
     return x[0]
 
+def rectify(x):
+    return x * (x>0)
+
 def gamma_phi_square(_x,gamma=5.0):
     x = np.array([_x])
     x[x<=0] = 0
