@@ -16,6 +16,7 @@ if __name__ == "__main__":
 	wP = np.sqrt(((2-beta)/beta)*(1/2)) # np.sqrt(1.95/0.1)
 	means=np.arange(0.0,5.1,1.0)
 	circuit = Circuit()
+	circuit.dt = 0.01
 	circuit.R_neuron= True
 	circuit.single_PV = True
 	circuit.PV_mu = False
@@ -166,6 +167,6 @@ if __name__ == "__main__":
 
 	plt.tight_layout()
 
-	plt.savefig('./Rratesandweights_all2%s.png'%name, bbox_inches='tight')
-	plt.savefig('./Rratesandweights_all2%s.pdf'%name, bbox_inches='tight')
+	plt.savefig('./Rratesandweights_all2dt%s%s.png'%(str(circuit.dt),name), bbox_inches='tight')
+	plt.savefig('./Rratesandweights_all2dt%s%s.pdf'%(str(circuit.dt),name), bbox_inches='tight')
     

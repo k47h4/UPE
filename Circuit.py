@@ -29,6 +29,7 @@ class Circuit:
 			truth value indicates whether activation functions are rectified
 		"""
 		self.uncertainty_weighted = True
+		self.stimulus_duration = 3
 		self.weighting = 1.0
 		self.error_weighting = 0.1 
 		self.PV_weighting = 1.0 
@@ -101,7 +102,7 @@ class Circuit:
 		self.wER_N = np.array([self.wE])
 		self.wEY1_P = np.array([self.wE])
 
-		if self.plastic_ES:
+		if self.plastic_ES == True:
 			self.wES_P = np.array([self.w_init_ES])
 			self.wES_N = np.array([self.w_init_ES])
 		else:
@@ -120,12 +121,12 @@ class Sim:
 	def __init__(self, stimulus_duration = 1, number_of_samples=400000, stimulus_gap=False):
 		self.stimulus_duration = stimulus_duration
 		self.number_of_samples = number_of_samples
-		if stimulus_gap:
+		self.stimulus_gap = stimulus_gap
+		if stimulus_gap == True:
 			self.T = self.number_of_samples * (self.stimulus_duration +3)
 		else:
 			self.T = self.number_of_samples * self.stimulus_duration
-		print(self.T)
-		print('sim_init')
+
 		self.sigma = 0.5
 		self.mean= 5.0
 		#learning rate
@@ -169,17 +170,18 @@ class Sim:
 
 	def get_stimuli(self,mean,sigma, stimulus_gap=False):
 		# whisker
-		if stimulus_gap:
+		if self.stimulus_gap:
 			self.T = self.number_of_samples * (self.stimulus_duration + 3)
-		print(self.T)
 		rY1 = np.zeros(self.T)
 		Y1 = sigma*np.random.randn(self.number_of_samples)+mean
 		for i in range(self.stimulus_duration):
-			rY1[i::self.stimulus_duration+stimulus_gap*3] = Y1
-		if stimulus_gap: 
+			if stimulus_gap == True:
+				rY1[i::self.stimulus_duration+stimulus_gap*3] = Y1
+			else:
+				rY1[i::self.stimulus_duration] = Y1
+		if stimulus_gap == True: 
 			rY1[:-3] = rY1[3:]
 			rY1[-3:] = np.zeros((3))
-		print(rY1)
 		return rY1
 
 
@@ -484,7 +486,6 @@ class Sim:
 
 			ws_sigma += (1/n) * ((rY1[t] - rS_P)**2 - ws_sigma)
 			sigma_e_mon[t] = sigma_e
-
 			if ((1/n) * (circuit.wPX1 - wa_mu)) > 1e-6:
 				beta_dyn = (.1/(.1+wa_mu))
 				phase1[t]=1 
@@ -664,7 +665,10 @@ class Sim:
 		self.sigma = sigma
 		self.mean = mean
 
-		if stimulus_gap:
+		print('T fakePV')
+		print(self.T)
+		if stimulus_gap == True:
+			print('fake PV stimgap True')
 			self.T = self.number_of_samples * (self.stimulus_duration +3)
 		else:
 			self.T = self.number_of_samples * self.stimulus_duration
@@ -701,7 +705,7 @@ class Sim:
 
 		for t in range(T):
 
-			if circuit.R_neuron:
+			if circuit.R_neuron == True:
 				rR = R
 			else:
 				rR=rRrate[t]
@@ -910,7 +914,7 @@ class Sim:
 
 		for t in range(T):
 
-			if self.R_neuron:
+			if self.R_neuron == True:
 				rR = R
 			else:
 				rR=rRrate[t]
@@ -1146,7 +1150,7 @@ class Sim:
 
 		for t in range(T):
 
-			if self.R_neuron:
+			if self.R_neuron == True:
 				rR = R
 			else:
 				rR=rRrate[t]
@@ -1203,7 +1207,7 @@ class Sim:
 				
 			# store monitors
 			rP_monitor[t] = rP
-			if not self.single_PV:
+			if self.single_PV == False:
 				rP_P_monitor[t] = rP_P
 				rP_N_monitor[t] = rP_N
 
@@ -1269,15 +1273,15 @@ class Sim:
 			#wRE_N += plastic * eta_RE * (wRE_P*rE_P - wRE_N*rE_N) * rE_N
 
 			self.wPX1 += self.dt*dwPX1
-			if not self.single_PV:
+			if self.single_PV == False:
 				self.wPX1_P += self.dt*dwPX1_P
 				self.wPX1_N += self.dt*dwPX1_N
 
 			self.wRX1 += self.dt*dwRX1
-			if self.plastic_PS:
+			if self.plastic_PS == True:
 				self.wPS_P += self.dt*dwPS_P
 				self.wPS_N += self.dt*dwPS_N
-			if self.plastic_ES:
+			if self.plastic_ES == True:
 				self.wES_P += self.dt*dwES_P
 				self.wES_N += self.dt*dwES_N
 
@@ -1417,7 +1421,7 @@ class Sim:
 
 		for t in range(T):
 
-			if self.R_neuron:
+			if self.R_neuron == True:
 				rR = R
 			else:
 				rR=rRrate[t]
@@ -1425,7 +1429,7 @@ class Sim:
 			drS_P = (-rS_P + phi(self.wSR_P * R,case=self.rectified))/self.tau_S
 			drS_N = (-rS_N + phi(self.wSY1_N * rY1[t],case=self.rectified))/self.tau_S
 
-			if self.single_PV:
+			if self.single_PV == True:
 				raise ValueError
 			else:
 				drP_P = (-rP_P + phi_square((1-self.beta_P)*(self.wPX1_P * rX1[t]) + self.beta_P*(self.wPY1 * rY1[t] - self.wPS_P * rS_P)))/self.tau_P
@@ -1435,7 +1439,7 @@ class Sim:
 
 			PV_in_a[t] = (1-self.beta_P)*(self.wPX1 * rX1[t])
 			PV_in[t] = (self.wPY1 * rY1[t] - self.PV_mu*(self.wPS_P * rS_P) + self.PV_mu*(self.wPR * rR) - self.wPS_N * rS_N)
-			if self.single_PV:
+			if self.single_PV == True:
 				raise ValueError
 			else:
 				drE_P = (-rE_P + phi((self.uncertainty_weighted*(1.0/(self.PV_weighting + (self.wEP_P * rP_P) + (self.wEP_N * rP_N))) + ((1-self.uncertainty_weighted)*self.weighting)) * (self.wEY1_P * rY1[t] - self.wES_P * rS_P),case=self.rectified))/self.tau_E                    
@@ -1452,7 +1456,7 @@ class Sim:
 				
 			# store monitors
 			rP_monitor[t] = rP
-			if not self.single_PV:
+			if self.single_PV == False:
 				rP_P_monitor[t] = rP_P
 				rP_N_monitor[t] = rP_N
 
@@ -1482,7 +1486,7 @@ class Sim:
 			#v = (1/self.beta_P)*(np.sqrt(rP)-((1-self.beta_P)/2)*self.wPX1*rX1[t])
 			#dwPX1 = self.plastic_PX * eta_P * ((np.sqrt(17)*v - (self.wPX1*rX1[t])) * rX1[t])
 			dwPX1 = self.plastic_PX * eta_P * ((rP - phi_square(self.wPX1*rX1[t])) * rX1[t])
-			if not self.single_PV:
+			if self.single_PV == False:
 				dwPX1_P = self.plastic_PX * eta_P * ((rP_P - phi_square(self.wPX1_P*rX1[t])) * rX1[t])
 				dwPX1_N = self.plastic_PX * eta_P * ((rP_N - phi_square(self.wPX1_N*rX1[t])) * rX1[t])
 
@@ -1498,7 +1502,7 @@ class Sim:
 			R += self.dt*drR
 			rS_P += self.dt*drS_P
 			rS_N += self.dt*drS_N
-			if self.single_PV:
+			if self.single_PV == True:
 				rP += self.dt*drP
 			else:
 				rP_P += self.dt*drP_P
@@ -1512,15 +1516,15 @@ class Sim:
 			#wRE_N += plastic * eta_RE * (wRE_P*rE_P - wRE_N*rE_N) * rE_N
 
 			self.wPX1 += self.dt*dwPX1
-			if not self.single_PV:
+			if self.single_PV == False:
 				self.wPX1_P += self.dt*dwPX1_P
 				self.wPX1_N += self.dt*dwPX1_N
 
 			self.wRX1 += self.dt*dwRX1
-			if self.plastic_PS:
+			if self.plastic_PS == True:
 				self.wPS_P += self.dt*dwPS_P
 				self.wPS_N += self.dt*dwPS_N
-			if self.plastic_ES:
+			if self.plastic_ES == True:
 				self.wES_P += self.dt*dwES_P
 				self.wES_N += self.dt*dwES_N
 

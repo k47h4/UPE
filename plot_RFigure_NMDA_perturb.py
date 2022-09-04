@@ -14,9 +14,10 @@ if __name__ == "__main__":
 	seed = 123 
 	beta = 0.1 
 	wP = np.sqrt(((2-beta)/beta)*(1/2)) # np.sqrt(1.95/0.1)
+	perturbation = 1.0
+	wE = 1.0	
 	means=np.arange(0.0,5.1,1.0)
 	circuit = Circuit()
-	circuit.dt=0.1
 	circuit.R_neuron= True
 	circuit.NMDA = True
 	circuit.single_PV = False
@@ -25,6 +26,11 @@ if __name__ == "__main__":
 	circuit.wPR = np.array([wP]) # small intitial weights
 	circuit.wPS_P = np.array([wP])
 	circuit.wPS_N = np.array([wP])
+	circuit.wER_N = np.array([wE])
+	circuit.wEY1_P = np.array([wE])
+	circuit.wES_P = np.array([wE])
+	circuit.wES_N = np.array([wE+(perturbation*wE)])
+
 	sim = Sim(stimulus_duration=4,number_of_samples=200000)
 	with multiprocessing.Pool(processes=5) as pool:
 	    mean_results=pool.starmap(sim.run, zip(repeat(circuit),means,repeat(0.4),repeat(seed)))  
@@ -166,6 +172,6 @@ if __name__ == "__main__":
 
 	plt.tight_layout()
 
-	plt.savefig('./Rratesandweights_alldt0.1%s.png'%name, bbox_inches='tight')
-	plt.savefig('./Rratesandweights_alldt0.1%s.pdf'%name, bbox_inches='tight')
+	plt.savefig('./perturb+1000percentUPE-_Rratesandweights_all%s.png'%name, bbox_inches='tight')
+	plt.savefig('./perturb+100percentUPE-_Rratesandweights_all%s.pdf'%name, bbox_inches='tight')
     
