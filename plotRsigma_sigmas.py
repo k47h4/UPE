@@ -45,26 +45,28 @@ if __name__ == "__main__":
 
     plt.figure(figsize=(6,3))
     #plt.plot(sigmas, PV_avg*(1/np.sqrt(2)))
-    plt.subplot(121)
+    a2 = plt.subplot(121)
     plt.errorbar(sigmas, wRX_std, linestyle='',marker='.',color='k')
-
-
+    a2.spines['top'].set_visible(False)
+    a2.spines['right'].set_visible(False)
     plt.xlim(-.1,2.0)
     plt.ylim(-.1,2.0)
-    plt.xticks(np.arange(0.5,2.0,.5),[0.5,1.0,1.5],fontsize=12)
-    plt.yticks(np.arange(0.5,2.0,.5),[0.5,1.0,1.5],fontsize=12)
+    plt.xticks(np.arange(0.5,2.0,.5),[0.5,1.0,1.5],fontsize=16)
+    plt.yticks(np.arange(0.5,2.0,.5),[0.5,1.0,1.5],fontsize=16)
 
     plt.xlabel(r'$\sigma_s$',fontsize=16)
     plt.ylabel(r'$\sigma$ of $w_{R,a}$',fontsize=16)
-    plt.subplot(122)
+    a3 = plt.subplot(122)
     #plt.plot(sigmas**2, PV_avg, color='k')
     plt.errorbar(sigmas, R_std, linestyle='',marker='.',color='k')
 
 
     plt.xlim(-.1,2.0)
     plt.ylim(-.1,2.0)
-    plt.xticks(np.arange(0.5,2.0,.5),[0.5,1.0,1.5],fontsize=12)
-    plt.yticks(np.arange(0.5,2.0,.5),[0.5,1.0,1.5],fontsize=12)
+    a3.spines['top'].set_visible(False)
+    a3.spines['right'].set_visible(False)
+    plt.xticks(np.arange(0.5,2.0,.5),[0.5,1.0,1.5],fontsize=16)
+    plt.yticks(np.arange(0.5,2.0,.5),[0.5,1.0,1.5],fontsize=16)
     plt.xlabel(r'$\sigma_s$',fontsize=16)
     plt.ylabel(r'$\sigma$ of $r_{R}$',fontsize=16)
     plt.tight_layout()

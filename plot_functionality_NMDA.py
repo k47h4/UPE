@@ -121,7 +121,7 @@ if __name__ == "__main__":
 	plt.legend(bbox_to_anchor=(1,1),fontsize=11)
 
 	plt.tight_layout()
-	plt.savefig('./timeevolutionofrates_NMDA_dt0.1%s.pdf'%str(eta_R), bbox_inches='tight')
+	plt.savefig('./newtimeevolutionofrates_NMDA_dt0.1%s.pdf'%str(eta_R), bbox_inches='tight')
 
 
 	exponent = 1 # if 2 it's variance 
@@ -161,8 +161,8 @@ if __name__ == "__main__":
 
 	plt.tight_layout()
 	#plt.legend(fontsize=11)
-	plt.savefig('./Functionality_barplot_NMDA_dt0.1%s%s%s.png'%(str(seed),str(eta_R),str(sigma_2)), bbox_inches='tight')
-	plt.savefig('./Functionality_barplot_NMDA_dt0.1%s%s%s.pdf'%(str(seed),str(eta_R),str(sigma_2)), bbox_inches='tight')
+	plt.savefig('./newFunctionality_barplot_NMDA_dt0.1%s%s%s.png'%(str(seed),str(eta_R),str(sigma_2)), bbox_inches='tight')
+	plt.savefig('./newFunctionality_barplot_NMDA_dt0.1%s%s%s.pdf'%(str(seed),str(eta_R),str(sigma_2)), bbox_inches='tight')
 
 
 

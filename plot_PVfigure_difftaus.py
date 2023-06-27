@@ -19,27 +19,40 @@ if __name__ == "__main__":
 	Y1_sigma = 0.8
 	Y2_sigma = 0.4
 	beta=0.1
-	seed = 123
-	no_samples = 100000
-	stimulus_duration = 1
-	sim_time = stimulus_duration * no_samples
-	start = sim_time-10000
+	seed = 1345
+	stim_duration = 10
+	no_samples = 400000
+	sim_time = stim_duration * no_samples
+	start = sim_time-400000
+
 	circuit1 = Circuit()
 	circuit1.beta_P = beta
+	circuit1.dt = 1.0
 	wP = np.sqrt((2-beta)/beta) # np.sqrt(1.95/0.1)
 	circuit1.wPY1 = np.array([wP]) # small intitial weights
 	circuit1.wPS_P = np.array([wP])
-	sim = Sim(stimulus_duration=stimulus_duration,number_of_samples=no_samples)
-	results1=sim.run_pPE(circuit1,mean=Y1_mean,sigma=Y1_sigma,seed=seed)
+	sim = Sim(stimulus_duration=stim_duration, number_of_samples = no_samples)
+	sim.eta_R = 0.1*0.1
+	sim.eta_P = 0.001*0.1
+	sim.eta_S = 0.1*0.1
+	sim.eta_ES = 0.01*0.1
+	sim.eta_PS = 0.0001*0.1
+	results1=sim.run_pPE(circuit1,mean=Y1_mean,sigma=Y1_sigma,start=start,seed=seed)
 
 
 	circuit2 = Circuit()
+	circuit2.dt = 1.0
 	circuit2.beta_P = beta
 	wP = np.sqrt((2-beta)/beta) # np.sqrt(1.95/0.1)
 	circuit2.wPY1 = np.array([wP]) # small intitial weights
 	circuit2.wPS_P = np.array([wP])
-	sim = Sim(stimulus_duration=stimulus_duration,number_of_samples=no_samples)
-	results2=sim.run_pPE(circuit2,mean=Y2_mean,sigma=Y2_sigma,seed=seed)
+	sim = Sim(stimulus_duration=stim_duration, number_of_samples = no_samples)
+	sim.eta_R = 0.1*0.1
+	sim.eta_P = 0.001*0.1
+	sim.eta_S = 0.1*0.1
+	sim.eta_ES = 0.01*0.1
+	sim.eta_PS = 0.0001*0.1
+	results2=sim.run_pPE(circuit2,mean=Y2_mean,sigma=Y2_sigma,start=start,seed=seed)
 
 
 	# run sim with 10 different sigmas in parallel
@@ -49,35 +62,44 @@ if __name__ == "__main__":
 	sigmas = np.arange(0.1,1.1,0.1)
 	PV_avg = np.empty_like(sigmas)
 	PV_std = np.empty_like(sigmas)
+	PVr_avg = np.empty_like(sigmas)
+	PVr_std = np.empty_like(sigmas)
 	wPX_avg = np.empty_like(sigmas)
 	wPX_std = np.empty_like(sigmas)
 	circuit = Circuit()
+	circuit.dt = 1.0
 	circuit.beta_P = beta
 	circuit.wPY1 = np.array([wP]) # small intitial weights
 	circuit.wPS_P = np.array([wP])
-	sim = Sim(stimulus_duration=stimulus_duration,number_of_samples=no_samples)
+	sim = Sim(stimulus_duration=stim_duration, number_of_samples = no_samples)
+	sim.eta_R = 0.1*0.1
+	sim.eta_P = 0.001*0.1
+	sim.eta_S = 0.1*0.1
+	sim.eta_ES = 0.01*0.1
+	sim.eta_PS = 0.0001*0.1
 	with multiprocessing.Pool(processes=5) as pool:
 	    results=pool.starmap(sim.run_pPE, zip(repeat(circuit),repeat(mean),sigmas,repeat(start),repeat(seed)))
 
 
 	for i,sigma in enumerate(sigmas):
-	    PV_avg[i] = np.mean(results[i]['rPa'][100000:])
-	    PV_std[i] = np.std(results[i]['rPa'][100000:])
-	    wPX_avg[i] = np.mean(results[i]['wPX1'][100000:])
-	    wPX_std[i] = np.std(results[i]['wPX1'][100000:])
+		PV_avg[i] = np.mean(results[i]['rPa'][start:])
+		PV_std[i] = np.std(results[i]['rPa'][start:])
+		PVr_avg[i] = np.mean(results[i]['rP'][start:])
+		PVr_std[i] = np.std(results[i]['rP'][start:])
+		wPX_avg[i] = np.mean(results[i]['wPX1'][start:])
+		wPX_std[i] = np.std(results[i]['wPX1'][start:])
 
 
 
 	# plot everything in one plot:
 
-	name = ''
+	name = 'longertime'
 	sigma1=0.8
 	sigma2=0.4
-	sim_time= 400000
-	PV_avg1 = np.mean(results1['rPa'][100000:])
-	PV_avg2 = np.mean(results2['rPa'][100000:])
-	PV_std1 = np.std(results1['rPa'][100000:])
-	PV_std2 = np.std(results2['rPa'][100000:])
+	PV_avg1 = np.mean(results1['rPa'][start:])
+	PV_avg2 = np.mean(results2['rPa'][start:])
+	PV_std1 = np.std(results1['rPa'][start:])
+	PV_std2 = np.std(results2['rPa'][start:])
 
 	plt.figure(figsize=(7,10))
 	a1 = plt.subplot(321)
@@ -176,22 +198,22 @@ if __name__ == "__main__":
 	a6.text(-0.1, 1.15, 'E', transform=a6.transAxes,
 	          fontsize=16, va='top', ha='right')
 	#plt.plot(sigmas**2, PV_avg, color='k')
-	plt.errorbar(sigmas**2, PV_avg, yerr=PV_std, linestyle='',marker='.',color='k')
+	plt.errorbar(sigmas**2, PVr_avg, yerr=PVr_std, linestyle='',marker='.',color='k')
 
 	plt.xlim(-.1,1.1)
-	plt.ylim(-.1,1.1)
+	plt.ylim(-.1,2.1)
 
 	#plt.ylim(-.1,2.0)
 	plt.xticks(np.arange(0.0,1.2,.5),[0.0,.5,1.0],fontsize=16)
-	plt.yticks(np.arange(0.0,1.2,.5),[0.0,.5,1.0],fontsize=16)
+	plt.yticks(np.arange(0.0,2.2,1.0),[0.0,1.0,2.0],fontsize=16)
 
 	plt.xlabel(r'$\sigma^2$',fontsize=16)
-	plt.ylabel(r'$r_{PV}(a)$',fontsize=16)
+	plt.ylabel(r'$r_{PV}$',fontsize=16)
 	a6.spines['top'].set_visible(False)
 	a6.spines['right'].set_visible(False)
 
 	plt.tight_layout()
 
-	plt.savefig('./PVratesandweights_all2%s.png'%name, bbox_inches='tight')
-	plt.savefig('./PVratesandweights_all2%s.pdf'%name, bbox_inches='tight')
+	plt.savefig('./PVratesandweights_difftaus_all2%s.png'%name, bbox_inches='tight')
+	plt.savefig('./PVratesandweights_difftaus_all2%s.pdf'%name, bbox_inches='tight')
 

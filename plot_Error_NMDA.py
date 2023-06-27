@@ -16,7 +16,7 @@ import time
 
 
 
-def plot_erroractivity(mismatch_results,training_mean,mean_range,sigma_range,name):
+def plot_erroractivity(mismatch_results,training_mean,mean_range,sigma_range,exponent,name):
     #mean_range=mismatch_results.keys()
     #sigma_range=mismatch_results[mean_range[0]].keys()
     
@@ -43,17 +43,21 @@ def plot_erroractivity(mismatch_results,training_mean,mean_range,sigma_range,nam
         print(1-k*0.1)
         #plt.plot(mean_range, E_P_analytical[:,k], color='k')
 
-        plt.plot(mean_range, E_P_rates[:,k], color=cm.viridis(1-k*0.1))
+        plt.plot(mean_range, E_P_rates[:,k], color=cm.viridis(0.7-k*0.1))
         #plt.plot(mean_range, E_N_analytical[:,k], color='k')
-        plt.plot(mean_range, E_N_rates[:,k], color=cm.viridis(1-k*0.1),label=r'$\sigma=%.1f$'%sigma)
+        plt.plot(mean_range, E_N_rates[:,k], '--', color=cm.viridis(0.7-k*0.1),label=r'$\sigma=%.1f$'%sigma)
 
 
     # works for wP=3.0
     #plt.xlim(0.1,1.0)
     #plt.ylim(0.1,1.0)
     plt.xticks(mean_range,mean_range-training_mean,fontsize=16)
-    plt.yticks(np.arange(0,4,1),np.arange(0,4,1),fontsize=16)
-
+    if exponent == 2.0:
+        plt.yticks(np.arange(0,4,1),np.arange(0,4,1),fontsize=16)
+    elif exponent == 2.5:
+        plt.yticks(np.arange(0,8,1),np.arange(0,8,1),fontsize=16)
+    else:
+        pass
     #plt.yticks(np.arange(0,2.1,0.5),np.arange(0,2.1,0.5),fontsize=16)
     plt.xlabel(r'$s-\mu$',fontsize=20)
     plt.ylabel(r'$\Upsilon\  rate$',fontsize=20)
@@ -78,7 +82,12 @@ def plot_erroractivity(mismatch_results,training_mean,mean_range,sigma_range,nam
     #plt.xlim(0.1,1.0)
     #plt.ylim(0.1,1.0)
     plt.xticks([.1,.5,1.0],[.1,.5,1.0],fontsize=16)
-    plt.yticks(np.arange(0,4,1),np.arange(0,4,1),fontsize=16)
+    if exponent == 2.0:
+        plt.yticks(np.arange(0,4,1),np.arange(0,4,1),fontsize=16)
+    elif exponent == 2.5:
+        plt.yticks(np.arange(0,8,1),np.arange(0,8,1),fontsize=16)
+    else:
+        pass
     plt.legend(bbox_to_anchor=(1,1), fontsize=16, loc="upper left")
 
     plt.xlabel(r'$\sigma$',fontsize=20)
@@ -97,7 +106,12 @@ def plot_erroractivity(mismatch_results,training_mean,mean_range,sigma_range,nam
     plt.xticks([.1,.5,1.0],[.1,.5,1.0],fontsize=16)
 
     #plt.xticks([.1,.9,1.7],[.1,.9,1.7],fontsize=16)
-    plt.yticks(np.arange(0,4,1),np.arange(0,4,1),fontsize=16)
+    if exponent == 2.0:
+        plt.yticks(np.arange(0,4,1),np.arange(0,4,1),fontsize=16)
+    elif exponent == 2.5:
+        plt.yticks(np.arange(0,8,1),np.arange(0,8,1),fontsize=16)
+    else:
+        pass
     plt.xlabel(r'$\sigma$',fontsize=20)
     plt.ylabel(r'$\Upsilon^-$ rate',fontsize=20)
     plt.tight_layout()
@@ -111,6 +125,7 @@ if __name__ == "__main__":
     training_mean = 5.0 
     sigmas = np.arange(0.1,1.1,0.3)
     beta = 0.1
+    exponent = 2.5
     wP = np.sqrt(((2-beta)/beta)) # np.sqrt(1.95/0.1)
     circuit = Circuit()
     circuit.single_PV = False
@@ -119,6 +134,7 @@ if __name__ == "__main__":
     circuit.wPS_P = np.array([wP])
     circuit.wPS_N = np.array([wP])
     circuit.NMDA = True
+    circuit.exponent = exponent
 
     sim = Sim(stimulus_duration=1,number_of_samples=200000)
     with multiprocessing.Pool(processes=5) as pool:
@@ -134,6 +150,7 @@ if __name__ == "__main__":
         circuit.Rrate = training_mean
         circuit.plastic_PX=False
         circuit.NMDA = True
+        circuit.exponent = exponent
         circuit.wPY1 = np.array([wP]) # small intitial weights
         circuit.wPR = np.array([wP]) # small intitial weights
         circuit.wPS_P = np.array([wP])
@@ -141,8 +158,8 @@ if __name__ == "__main__":
         circuit.wRX1 = training_results[i]['wRX1'][-1]
         circuit.wPX1_P = training_results[i]['wPX1_P'][-1]
         circuit.wPX1_N = training_results[i]['wPX1_N'][-1]
-        sim = Sim(stimulus_duration=3,number_of_samples=200000)
+        sim = Sim(stimulus_duration=4,number_of_samples=200000)
         with multiprocessing.Pool(processes=5) as pool:
             mismatch_results[sigma]=pool.starmap(sim.run, zip(repeat(circuit),means,repeat(0.0),repeat(seed)))     
 
-    plot_erroractivity(mismatch_results,training_mean,means,sigmas,'NMDA')
+    plot_erroractivity(mismatch_results,training_mean,means,sigmas,exponent,'NMDAstimdur4%s'%str(exponent))
