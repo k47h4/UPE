@@ -54,27 +54,40 @@ if __name__ == "__main__":
         
 
 
-    a6 = plt.subplot(111)
-    a6.text(-0.1, 1.15, 'A', transform=a6.transAxes,
-              fontsize=16, va='top', ha='right')
-    plt.errorbar(betas, PVa_avg, yerr=PVa_std, linestyle='',marker='.',color='k')
-    plt.errorbar(betas, wPVa_avg, yerr=wPVa_std, linestyle='',marker='+',color=cm.viridis(0.8))
-    plt.plot(np.arange(0,2),np.ones(2)*sigma**2,'--',color ='k',label=r'$\sigma^2$')
-    plt.plot(np.arange(0,2),np.ones(2)*sigma,'--',color =cm.viridis(.8),label=r'$\sigma^2$')
-    a6.set_xscale('log')
+    plt.figure(figsize=(5,4))
+    a1 = plt.subplot(111)
+    #a1.text(-0.1, 1.15, 'A', transform=a1.transAxes,
+    #          fontsize=16, va='top', ha='right')
+    a1.errorbar(betas, PVa_avg, yerr=PVa_std, linestyle='',marker='.',color='k')
+    a1.plot(np.arange(0,3),np.ones(3)*sigma**2,'--',color ='k',label=r'$\sigma^2$')
+    a1.set_xscale('log')
 
     #plt.xlim(-.1,1.1)
     #plt.ylim(-.1,1.1)
 
     #plt.ylim(-.1,2.0)
-    #plt.xticks(np.arange(0.0,1.2,.5),[0.0,.5,1.0],fontsize=16)
-    #plt.yticks(np.arange(0.0,1.2,.5),[0.0,.5,1.0],fontsize=16)
+    #a1.set_xticklabels(fontsize=16)
+    a1.set_yticks(np.arange(0.0,0.6,.5))
+    a1.set_yticklabels([0.0,.5],fontsize=16)
+    a1.set_xlim(0,1.0)
+    a1.set_xlabel(r'$\beta$',fontsize=16)
+    a1.set_ylabel(r'$r_{PV}(a)$',fontsize=16)
+    a1.spines['top'].set_visible(False)
+    a1.spines['right'].set_visible(False)
+    a1.set_ylim(0,0.52)
+    a2 = a1.twinx()  # instantiate a second axes that shares the same x-axis
+    a2.errorbar(betas, wPVa_avg, yerr=wPVa_std, linestyle='',marker='+',color=cm.viridis(0.8))
+    a2.plot(np.arange(0,3),np.ones(3)*sigma,'--',color =cm.viridis(.8),label=r'$\sigma^2$')
+    a2.set_ylabel(r'$w_{PV,a}$',fontsize=16)
+    a2.set_ylim(0,0.52)
+    a2.set_yticks(np.arange(0.0,0.6,.5))
+    a2.set_yticklabels([0.0,.5],fontsize=16)
+    a1.tick_params(axis='x', labelsize=16)
+    a2.spines['top'].set_visible(False)
 
-    plt.xlabel(r'$\beta$',fontsize=16)
-    plt.ylabel(r'$r_{PV}(a)$ / $w_{PV,a}$',fontsize=16)
-    a6.spines['top'].set_visible(False)
-    a6.spines['right'].set_visible(False)
 
+
+    plt.legend(bbox_to_anchor=(1,1), fontsize=16, loc="upper left")
 
     plt.tight_layout()
 

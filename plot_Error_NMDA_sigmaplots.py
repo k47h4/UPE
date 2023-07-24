@@ -36,45 +36,14 @@ def plot_erroractivity(mismatch_results,training_mean,mean_range,sigma_range,exp
             E_P_analytical[i,j] = (1/(1.0+(0.9*sigma)**2))*diff_E
             E_N_analytical[i,j] = (1/(1.0+(0.9*sigma)**2))*diff_N
 
-    plt.figure(figsize=(8,5))
-    #plt.plot(sigmas, PV_avg*(1/np.sqrt(2)))
-    plt.subplot(111)
-    for k,sigma in enumerate(sigma_range):
-        print(1-k*0.1)
-        #plt.plot(mean_range, E_P_analytical[:,k], color='k')
 
-        plt.plot(mean_range, E_P_rates[:,k], color=cm.viridis(0.7-k*0.1))
-        #plt.plot(mean_range, E_N_analytical[:,k], color='k')
-        plt.plot(mean_range, E_N_rates[:,k], '--', color=cm.viridis(0.7-k*0.1),label=r'$\sigma=%.1f$'%sigma)
-
-
-    # works for wP=3.0
-    plt.xlim()
-    #plt.ylim(0.1,1.0)
-
-    plt.xticks(np.arange(1,10,1),np.arange(1,10,1)-training_mean,fontsize=16)
-    if exponent == 2.0:
-        plt.yticks(np.arange(0,4,1),np.arange(0,4,1),fontsize=16)
-    elif exponent == 2.5:
-        plt.yticks(np.arange(0,8,1),np.arange(0,8,1),fontsize=16)
-    else:
-        pass
-    #plt.yticks(np.arange(0,2.1,0.5),np.arange(0,2.1,0.5),fontsize=16)
-    plt.xlabel(r'$s-\mu$',fontsize=20)
-    plt.ylabel(r'$\Upsilon\  rate$',fontsize=20)
-    #plt.legend(bbox_to_anchor=(1,1), fontsize=16, loc="upper left")
-    plt.legend(bbox_to_anchor=(1,1), fontsize=16, loc="upper left")
-
-    plt.tight_layout()
-    plt.savefig('./Eratemeanssigmas%s.png'%name, bbox_inches='tight')
-    plt.savefig('./Eratemeanssigmas%s.pdf'%name, bbox_inches='tight')
     
     plt.figure(figsize=(7,3))
     #plt.plot(sigmas, PV_avg*(1/np.sqrt(2)))
     plt.subplot(121)
     for k,mean in enumerate(mean_range):
-        #if mean in [6.0,7.0,8.0,9.0]:
-        plt.plot(sigma_range, E_P_rates[k,:], color=cm.magma((mean-5.0)*0.2),label=r'$|s-\mu|=%.f$'%np.abs(mean-training_mean))
+        if (mean > 5.0):
+            plt.plot(sigma_range, E_P_rates[k,:], color=cm.magma((mean-5.0)*0.2),label=r'$|s-\mu|=%.f$'%np.abs(mean-training_mean))
             #plt.plot(sigma_range, E_N_rates[k,:], color=cm.magma(mean*0.1),label=r'$E^- \mu=%.f$'%mean)
             #plt.plot(sigma_range, E_P_analytical[k,:], '--',color=cm.viridis((mean-5.0)*0.1))
         #plt.plot(sigma_range, E_N_analytical[k,:], '--', color=cm.magma(mean*0.1))
@@ -97,7 +66,7 @@ def plot_erroractivity(mismatch_results,training_mean,mean_range,sigma_range,exp
 
     plt.subplot(122)
     for k,mean in enumerate(mean_range):
-        if mean in [1.0,2.0,3.0,4.0]:
+        if (mean < 5.0):
             plt.plot(sigma_range, E_N_rates[k,:], '--',color=cm.magma((5.0-mean)*0.2))
         #plt.plot(sigma_range, E_N_analytical[k,:], '--', color=cm.viridis((5.0-mean)*0.1))
 
@@ -124,9 +93,9 @@ if __name__ == "__main__":
 
     seed = 123
     training_mean = 5.0 
-    sigmas = np.arange(0.1,1.1,0.2)
+    sigmas = np.arange(0.1,1.1,0.1)
     beta = 0.1
-    exponent = 2.5
+    exponent = 2.0
     wP = np.sqrt(((2-beta)/beta)) # np.sqrt(1.95/0.1)
     circuit = Circuit()
     circuit.dt = 0.1
@@ -142,7 +111,7 @@ if __name__ == "__main__":
     with multiprocessing.Pool(processes=4) as pool:
         training_results=pool.starmap(sim.run, zip(repeat(circuit),repeat(training_mean),sigmas,repeat(seed)))
 
-    means=np.arange(1.0,9.1,0.2)
+    means=np.array([1.0,3.0,7.0,9.0])
     mismatch_results = {}
     for i,sigma in enumerate(sigmas):
         print(np.mean(training_results[i]['wPX1_P'][-100000:]))

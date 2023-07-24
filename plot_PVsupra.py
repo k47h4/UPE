@@ -13,8 +13,8 @@ import time
 if __name__ == "__main__":
 
 
-    stim_dur = 1
-    no_samples = 100000
+    stim_dur = 10
+    no_samples = 20000
     sim_time = stim_dur*no_samples
     start= sim_time-10000
     Y1_mean = 5.0
@@ -24,22 +24,24 @@ if __name__ == "__main__":
     beta=0.1
     seed = 123
     circuit1 = Circuit()
+    circuit1.dt = 0.1
     circuit1.beta_P = beta
     circuit1.supra = 3.0
     wP = np.sqrt((2-beta)/beta) # np.sqrt(1.95/0.1)
     circuit1.wPY1 = np.array([wP]) # small intitial weights
     circuit1.wPS_P = np.array([wP])
-    sim = Sim(stimulus_duration=1)
+    sim = Sim(stimulus_duration=stim_dur,number_of_samples=no_samples)
     results1=sim.run_pPE(circuit1,mean=Y1_mean,sigma=Y1_sigma,seed=seed)
 
 
     circuit2 = Circuit()
+    circuit2.dt = 0.1
     circuit2.beta_P = beta
     circuit2.supra = 3.0
     wP = np.sqrt((2-beta)/beta) # np.sqrt(1.95/0.1)
     circuit2.wPY1 = np.array([wP]) # small intitial weights
     circuit2.wPS_P = np.array([wP])
-    sim = Sim(stimulus_duration=1)
+    sim = Sim(stimulus_duration=stim_dur,number_of_samples=no_samples)
     results2=sim.run_pPE(circuit2,mean=Y2_mean,sigma=Y2_sigma,seed=seed)
 
 
@@ -53,6 +55,7 @@ if __name__ == "__main__":
     wPX_avg = np.empty_like(sigmas)
     wPX_std = np.empty_like(sigmas)
     circuit = Circuit()
+    circuit.dt = 0.1
     circuit.beta_P = beta
     circuit.supra = 3.0
     circuit.wPY1 = np.array([wP]) # small intitial weights
@@ -163,8 +166,8 @@ if __name__ == "__main__":
     plt.errorbar(sigmas, wPX_avg, yerr=wPX_std, linestyle='',marker='.',color='k')
 
     # works for wP=3.0
-    plt.xlim(0.0,1.1)
-    plt.ylim(0.1,1.1)
+    #plt.xlim(0.0,1.1)
+    #plt.ylim(0.1,1.1)
     plt.xticks(np.arange(0.0,1.1,.5),[0.0,.5,1.0],fontsize=16)
     plt.yticks(np.arange(0,1.2,.5),[0.0,.5,1.0],fontsize=16)
 
@@ -179,8 +182,8 @@ if __name__ == "__main__":
     #plt.plot(sigmas**2, PV_avg, color='k')
     plt.errorbar(sigmas**2, PV_avg, yerr=PV_std, linestyle='',marker='.',color='k')
 
-    plt.xlim(-.1,1.1)
-    plt.ylim(-.1,1.1)
+    #plt.xlim(-.1,1.1)
+    #plt.ylim(-.1,1.1)
 
     #plt.ylim(-.1,2.0)
     plt.xticks(np.arange(0.0,1.2,.5),[0.0,.5,1.0],fontsize=16)
@@ -197,6 +200,47 @@ if __name__ == "__main__":
 
     plt.savefig('./PVratesandweights_all2%s.pdf'%name, bbox_inches='tight')
 
+
+    plt.figure(figsize=(7,3.3))
+    a5 = plt.subplot(121)
+    a5.text(-0.1, 1.15, 'A', transform=a5.transAxes,
+              fontsize=16, va='top', ha='right')
+    plt.errorbar(sigmas, wPX_avg, yerr=wPX_std, linestyle='',marker='.',color='k')
+
+    # works for wP=3.0
+    plt.xlim(0.0,1.1)
+    plt.ylim(-1,5.1)
+    plt.xticks(np.arange(0.0,1.1,.5),[0.0,.5,1.0],fontsize=16)
+    plt.yticks(np.arange(0,5.2,5.0),[0,5],fontsize=16)
+
+    plt.xlabel(r'$\sigma$',fontsize=16)
+    plt.ylabel(r'$w_{PV,a}$',fontsize=16)
+    a5.spines['top'].set_visible(False)
+    a5.spines['right'].set_visible(False)
+
+    a6 = plt.subplot(122)
+    a6.text(-0.1, 1.15, 'B', transform=a6.transAxes,
+              fontsize=16, va='top', ha='right')
+    #plt.plot(sigmas**2, PV_avg, color='k')
+    plt.errorbar(sigmas**2, PV_avg, yerr=PV_std, linestyle='',marker='.',color='k')
+
+    plt.xlim(-.1,1.1)
+    plt.ylim(-1,21)
+
+    #plt.ylim(-.1,2.0)
+    plt.xticks(np.arange(0.0,1.2,.5),[0.0,.5,1.0],fontsize=16)
+    plt.yticks(np.arange(0.0,20.2,10.0),[0,10,20],fontsize=16)
+
+    plt.xlabel(r'$\sigma^2$',fontsize=16)
+    plt.ylabel(r'$r_{PV}(a)$',fontsize=16)
+    a6.spines['top'].set_visible(False)
+    a6.spines['right'].set_visible(False)
+
+    plt.tight_layout()
+
+    plt.savefig('./PVratesandweights_%s1.png'%name, bbox_inches='tight')
+
+    plt.savefig('./PVratesandweights_%s1.pdf'%name, bbox_inches='tight')
 
     plt.figure(figsize=(7,3.3))
     a5 = plt.subplot(121)

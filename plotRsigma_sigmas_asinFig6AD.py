@@ -23,9 +23,12 @@ if __name__ == "__main__":
     tau_E = 10.0
     seed = 123 
     beta = 0.1 
+    dt = 0.1
+    stimulus_duration=100 # 10
     wP = np.sqrt(((2-beta)/beta)) # np.sqrt(1.95/0.1)
     sigmas=np.arange(0.1,2.1,0.2)
     circuit = Circuit()
+    circuit.dt = dt
     circuit.R_neuron= True
     circuit.single_PV = False
     circuit.tau_P = tau_I
@@ -41,11 +44,11 @@ if __name__ == "__main__":
     circuit.wPS_P = np.array([wP])
     circuit.wPS_N = np.array([wP])
     circuit.error_weighting=1.0
-    sim = Sim(stimulus_duration=10,number_of_samples=200000)
+    sim = Sim(stimulus_duration=stimulus_duration,number_of_samples=20000)
 
     # run for eta_R = 0.01
     sim.eta_R = 0.1
-    with multiprocessing.Pool(processes=5) as pool:
+    with multiprocessing.Pool(processes=4) as pool:
         sigma_results=pool.starmap(sim.run_fakePV, zip(repeat(circuit),repeat(5),sigmas,repeat(seed)))  
 
     R_std = np.empty(len(sigmas))
@@ -70,6 +73,7 @@ if __name__ == "__main__":
     weighting = 1.0
 
     circuitN = Circuit()
+    circuitN.dt = dt
     circuitN.tau_P = tau_I
     circuitN.tau_S = tau_I
     circuitN.tau_E = tau_E
@@ -84,10 +88,10 @@ if __name__ == "__main__":
     circuitN.wPS_P = np.array([wP]) 
     circuitN.wPS_N = np.array([wP]) 
     circuitN.error_weighting=1.0
-    sim = Sim(stimulus_duration=10,number_of_samples=200000)
+    sim = Sim(stimulus_duration=stimulus_duration,number_of_samples=20000)
 
     sim.eta_R = 0.1
-    with multiprocessing.Pool(processes=5) as pool:
+    with multiprocessing.Pool(processes=4) as pool:
         sigma_results_2=pool.starmap(sim.run_fakePV, zip(repeat(circuitN),repeat(5),sigmas,repeat(seed)))  
 
     R_std2 = np.empty(len(sigmas))
@@ -128,5 +132,5 @@ if __name__ == "__main__":
     #plt.legend(bbox_to_anchor=(1.0,0.6,0.5,0.5))
 
     plt.tight_layout()
-    plt.savefig('./Rsigma_fakePVEW1_etaR01%s.png'%name, bbox_inches='tight')
-    plt.savefig('./Rsigma_fakePVEW1_etaR01%s.pdf'%name, bbox_inches='tight')
+    plt.savefig('./Rsigma_fakePVEW1_etaR01dt01%s.png'%name, bbox_inches='tight')
+    plt.savefig('./Rsigma_fakePVEW1_etaR01dt01%s.pdf'%name, bbox_inches='tight')

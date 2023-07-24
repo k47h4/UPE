@@ -19,9 +19,12 @@ if __name__ == "__main__":
 
     seed = 123 
     beta = 0.1 
+    dt = 0.1
+    stimulus_duration = 10
     wP = np.sqrt(((2-beta)/beta)) # np.sqrt(1.95/0.1)
     sigmas=np.arange(0.1,2.1,0.2)
     circuit = Circuit()
+    circuit.dt = 0.1
     circuit.R_neuron= True
     circuit.single_PV = False
     #circuit.PV_mu = False
@@ -32,7 +35,7 @@ if __name__ == "__main__":
     circuit.wPS_P = np.array([wP])
     circuit.wPS_N = np.array([wP])
     circuit.error_weighting=1.0
-    sim = Sim(stimulus_duration=4,number_of_samples=200000)
+    sim = Sim(stimulus_duration=stimulus_duration*4,number_of_samples=200000)
     with multiprocessing.Pool(processes=5) as pool:
         sigma_results=pool.starmap(sim.run_fakePV, zip(repeat(circuit),repeat(5),sigmas,repeat(seed)))  
 
@@ -70,5 +73,5 @@ if __name__ == "__main__":
     plt.xlabel(r'$\sigma_s$',fontsize=16)
     plt.ylabel(r'$\sigma$ of $r_{R}$',fontsize=16)
     plt.tight_layout()
-    plt.savefig('./Rsigma_fakePVEW1.png', bbox_inches='tight')
-    plt.savefig('./Rsigma_fakePVEW1.pdf', bbox_inches='tight')
+    plt.savefig('./Rsigma_fakePVEW1dt01.png', bbox_inches='tight')
+    plt.savefig('./Rsigma_fakePVEW1dt01.pdf', bbox_inches='tight')

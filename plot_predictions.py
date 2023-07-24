@@ -42,11 +42,13 @@ def plot_mismatch_activity(results,singlePV=False):
     plt.ylim(0,2.5)
     #plt.yticks([0,1],[0,1],fontsize=16)
     #plt.xticks([5],[5],fontsize=16)
+    plt.xlim(0,10)
+    plt.ylim(0,2.5)
+    plt.yticks([0,1],[0,1],fontsize=16)
+    plt.xticks([5,7],[5,7],fontsize=16)
     plt.xlabel('stimulus', fontsize = 16)
     a.spines['top'].set_visible(False)
     a.spines['right'].set_visible(False)
-    a.spines['bottom'].set_visible(False)
-    a.spines['left'].set_visible(False)
     #a.legend(loc='center left', bbox_to_anchor=(1, 0.5),fancybox=True, shadow=False)
     a.legend(loc='upper left',markerscale=0.5,handlelength=1.0)#, bbox_to_anchor=(1, 0.5))
 
@@ -115,7 +117,7 @@ def plot_mismatch_activity(results,singlePV=False):
     a1.text(-0.1, 1.15, 'E', transform=a1.transAxes,
           fontsize=16, va='top', ha='right')
     plt.bar([0,1],[results[sigma_high][-1]['E_P_avg'],results[sigma_low][-1]['E_P_avg']],yerr=[results[sigma_high][-1]['E_P_std'],results[sigma_low][-1]['E_P_std']],color=[cm.viridis(.1),cm.viridis(.5)],width=0.3)  
-    plt.ylabel(r'$\Upsilon^+$ rate',fontsize=16)
+    plt.ylabel(r'UPE$^+$ rate',fontsize=16)
     plt.xticks([0,1],['high','low'],fontsize=16)
     plt.yticks([0,1,2],[0,1,2],fontsize=16)
     a1.spines['top'].set_visible(False)
@@ -128,7 +130,7 @@ def plot_mismatch_activity(results,singlePV=False):
     a5.text(-0.1, 1.15, 'F', transform=a5.transAxes,
           fontsize=16, va='top', ha='right')
     plt.bar([0,1],[results[sigma_high][-1]['E_N_avg'],results[sigma_low][-1]['E_N_avg']],yerr=[results[sigma_high][-1]['E_N_std'],results[sigma_low][-1]['E_N_std']],color=[cm.viridis(.1),cm.viridis(.5)],width=0.3)  
-    plt.ylabel(r'$\Upsilon^-$ rate',fontsize=16)
+    plt.ylabel(r'UPE$^-$ rate',fontsize=16)
     plt.xticks([0,1],['high','low'],fontsize=16)
     plt.yticks([0,1,2],[0,1,2],fontsize=16)
     a5.spines['top'].set_visible(False)
@@ -150,7 +152,7 @@ def plot_mismatch_activity(results,singlePV=False):
     plt.xlim(0,10)
     plt.ylim(0,2.5)
     plt.yticks([0,1],[0,1],fontsize=16)
-    plt.xticks([5],[5],fontsize=16)
+    plt.xticks([3,5],[3,5],fontsize=16)
     plt.xlabel('stimulus', fontsize = 16)
     an.spines['top'].set_visible(False)
     an.spines['right'].set_visible(False)
@@ -223,7 +225,7 @@ def plot_mismatch_activity(results,singlePV=False):
     a1n.text(-0.1, 1.15, 'K', transform=a1n.transAxes,
           fontsize=16, va='top', ha='right')
     plt.bar([0,1],[results[sigma_high][0]['E_P_avg'],results[sigma_low][0]['E_P_avg']],yerr=[results[sigma_high][0]['E_P_std'],results[sigma_low][0]['E_P_std']],color=[cm.viridis(.1),cm.viridis(.5)],width=0.3)  
-    plt.ylabel(r'$\Upsilon^+$ rate',fontsize=16)
+    plt.ylabel(r'UPE$^+$ rate',fontsize=16)
     plt.xticks([0,1],['high','low'],fontsize=16)
     plt.yticks([0,1,2],[0,1,2],fontsize=16)
     a1n.spines['top'].set_visible(False)
@@ -236,7 +238,7 @@ def plot_mismatch_activity(results,singlePV=False):
     a5n.text(-0.1, 1.15, 'L', transform=a5n.transAxes,
           fontsize=16, va='top', ha='right')
     plt.bar([0,1],[results[sigma_high][0]['E_N_avg'],results[sigma_low][0]['E_N_avg']],yerr=[results[sigma_high][0]['E_N_std'],results[sigma_low][0]['E_N_std']],color=[cm.viridis(.1),cm.viridis(.5)],width=0.3)  
-    plt.ylabel(r'$\Upsilon^-$ rate',fontsize=16)
+    plt.ylabel(r'UPE$^-$ rate',fontsize=16)
     plt.xticks([0,1],['high','low'],fontsize=16)
     plt.yticks([0,1,2],[0,1,2],fontsize=16)
     a5n.spines['top'].set_visible(False)
@@ -262,7 +264,7 @@ def plot_mismatch_activity(results,singlePV=False):
     """
     plt.tight_layout()
 
-    plt.savefig('./NMDAcircuitmismatch.pdf', bbox_inches='tight')
+    plt.savefig('./NMDAcircuitmismatchdt01.pdf', bbox_inches='tight')
 
 
 
@@ -272,8 +274,11 @@ if __name__ == "__main__":
   training_mean = 5.0 
   sigmas = np.arange(0.1,1.1,0.7)
   beta = 0.1
+  dt = 0.1
+  stimulus_duration = 10
   wP = np.sqrt(((2-beta)/beta)) # np.sqrt(1.95/0.1)
   circuit = Circuit()
+  circuit.dt = dt
   circuit.single_PV = False
   circuit.wPY1 = np.array([wP]) # small intitial weights
   circuit.wPR = np.array([wP]) # small intitial weights
@@ -281,8 +286,8 @@ if __name__ == "__main__":
   circuit.wPS_N = np.array([wP])
   circuit.NMDA = True
 
-  sim = Sim(stimulus_duration=1,number_of_samples=200000)
-  with multiprocessing.Pool(processes=5) as pool:
+  sim = Sim(stimulus_duration=stimulus_duration,number_of_samples=200000)
+  with multiprocessing.Pool(processes=4) as pool:
     training_results=pool.starmap(sim.run, zip(repeat(circuit),repeat(training_mean),sigmas,repeat(seed)))
 
 
@@ -292,6 +297,7 @@ if __name__ == "__main__":
     print(np.mean(training_results[i]['wPX1_P'][-100000:]))
     print(training_results[i]['wPX1_P'][-1])
     circuit = Circuit()
+    circuit.dt = dt
     circuit.single_PV = False
     circuit.Rrate = training_mean
     circuit.plastic_PX=False
@@ -303,9 +309,9 @@ if __name__ == "__main__":
     circuit.wRX1 = training_results[i]['wRX1'][-1]
     circuit.wPX1_P = training_results[i]['wPX1_P'][-1]
     circuit.wPX1_N = training_results[i]['wPX1_N'][-1]
-    sim = Sim(stimulus_duration=4,number_of_samples=200000)   
+    sim = Sim(stimulus_duration=stimulus_duration*4,number_of_samples=200000)   
     sim.eta_R = 0.1
-    with multiprocessing.Pool(processes=5) as pool:
+    with multiprocessing.Pool(processes=4) as pool:
       mismatch_results[sigma]=pool.starmap(sim.run, zip(repeat(circuit),means,repeat(0.0),repeat(seed)))     
 
 
